@@ -1,0 +1,57 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 Int       @id @default(autoincrement())
+  nome               String
+  email              String?   @unique // Opcional/Auxiliar para login ou identificação única
+  cpfHash            String    @unique // Blind index (SHA-256) para busca rápida e unicidade sem expor o CPF
+  cpf                String    // Dado sensível criptografado com AES-256-CBC (formato iv:encrypted)
+  endereco_principal String
+  telefone           String    // Dado sensível criptografado com AES-256-CBC
+  cartao_credito     String    // Dado sensível criptografado com AES-256-CBC
+  senha              String    // Hash irreversível gerado com bcrypt
+
+  // Relacionamentos (Um usuário pode ser vendedor de vários produtos e comprador de vários pedidos)
+  produtosAnunciados Product[] @relation("VendedorProdutos")
+  pedidosRealizados  Order[]   @relation("CompradorPedidos")
+
+  criadoEm           DateTime  @default(now())
+}
+
+model Product {
+  id         Int      @id @default(autoincrement())
+  nome       String
+  preco      Float
+  descricao  String   @db.Text
+  imagemUrl  String?  @db.LongText
+  vendedorId Int
+
+  // Relacionamento com User (Vendedor)
+  vendedor   User     @relation("VendedorProdutos", fields: [vendedorId], references: [id], onDelete: Cascade)
+  pedidos    Order[]
+
+  criadoEm   DateTime @default(now())
+}
+
+model Order {
+  id               Int      @id @default(autoincrement())
+  compradorId      Int
+  productId        Int
+  data_compra      DateTime @default(now())
+  endereco_entrega String
+  status_entrega   String   @default("Processando Pagamento") // Ex: "Processando Pagamento", "Em Rota de Entrega", "Entregue"
+
+  // Relacionamentos com User (Comprador) e Product
+  comprador        User     @relation("CompradorPedidos", fields: [compradorId], references: [id], onDelete: Restrict)
+  produto          Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+}
+

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Loja Mais Segura | Painel Comercial</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="container navbar-content">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <h1>Loja Mais Segura</h1>
+      </div>
+
+      <div id="user-panel" class="user-panel hidden">
+        <div class="user-badge">
+          <span class="role-tag">Administrador</span>
+          <span id="user-greeting">Usuário</span>
+        </div>
+        <button id="btn-logout" class="btn btn-outline btn-sm">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <main class="container main-content">
+    <!-- LOGIN / CADASTRO -->
+    <section id="auth-section" class="auth-wrapper">
+      <div class="auth-tabs">
+        <button id="tab-login" class="tab-btn active">Entrar</button>
+        <button id="tab-register" class="tab-btn">Criar Conta</button>
+      </div>
+
+      <form id="form-login" class="card auth-card">
+        <h2>Entrar na Conta</h2>
+
+        <div class="form-group">
+          <label for="login-identificador">CPF ou E-mail</label>
+          <input type="text" id="login-identificador" placeholder="Digite seu CPF ou e-mail" required />
+        </div>
+
+        <div class="form-group">
+          <label for="login-senha">Senha</label>
+          <input type="password" id="login-senha" placeholder="Digite sua senha" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Acessar</button>
+      </form>
+
+      <form id="form-register" class="card auth-card hidden">
+        <h2>Novo Cadastro</h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-nome">Nome Completo</label>
+            <input type="text" id="reg-nome" placeholder="Nome e sobrenome" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-email">E-mail</label>
+            <input type="email" id="reg-email" placeholder="seu@email.com" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-cpf">CPF</label>
+            <input type="text" id="reg-cpf" placeholder="000.000.000-00" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-telefone">Telefone</label>
+            <input type="text" id="reg-telefone" placeholder="(00) 00000-0000" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-endereco">Endereço de Entrega</label>
+          <input type="text" id="reg-endereco" placeholder="Rua, número, bairro e cidade" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="reg-cartao">Número do Cartão</label>
+            <input type="text" id="reg-cartao" placeholder="0000 0000 0000 0000" minlength="13" maxlength="19" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-senha">Senha</label>
+            <input type="password" id="reg-senha" placeholder="Crie uma senha" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Finalizar Cadastro</button>
+      </form>
+    </section>
+
+    <!-- LOJA E PAINEL DE COMPRA / VENDA / ENTREGA -->
+    <section id="store-section" class="store-wrapper hidden">
+      <div class="store-nav">
+        <button data-view="vitrine" class="nav-pill active">Loja (Comprar)</button>
+        <button data-view="anunciar" class="nav-pill">Vender Produto</button>
+        <button data-view="pedidos" class="nav-pill">Compras, Vendas e Entregas</button>
+      </div>
+
+      <!-- ABA 1: VITRINE DE PRODUTOS -->
+      <div id="view-vitrine" class="store-view">
+        <div class="section-header">
+          <h2>Catálogo de Produtos</h2>
+          <button id="btn-refresh-produtos" class="btn btn-outline btn-sm">Atualizar</button>
+        </div>
+
+        <div id="produtos-grid" class="produtos-grid"></div>
+      </div>
+
+      <!-- ABA 2: CADASTRAR PRODUTO PARA VENDA -->
+      <div id="view-anunciar" class="store-view hidden">
+        <div class="card form-card">
+          <h2>Anunciar Produto para Venda</h2>
+
+          <form id="form-produto" class="produto-form-layout">
+            <div class="produto-form-fields">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="prod-nome">Nome do Produto</label>
+                  <input type="text" id="prod-nome" placeholder="Ex: Notebook Dell Inspiron" required />
+                </div>
+                <div class="form-group">
+                  <label for="prod-preco">Preço de Venda (R$)</label>
+                  <input type="number" id="prod-preco" step="0.01" min="0.01" placeholder="0,00" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="prod-imagem">Link da Imagem do Produto (URL)</label>
+                <input type="text" id="prod-imagem" placeholder="Cole o link da imagem ou endereço da foto" />
+              </div>
+
+              <div class="form-group">
+                <label for="prod-descricao">Descrição do Produto</label>
+                <textarea id="prod-descricao" rows="3" placeholder="Características, modelo e informações do item" required></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Publicar Produto na Loja</button>
+            </div>
+
+            <div class="produto-preview-box">
+              <span class="preview-label">Pré-visualização da Foto</span>
+              <div class="preview-frame">
+                <img id="img-preview" src="https://placehold.co/600x400/e5e7eb/6b7280?text=Foto+do+Produto" alt="Prévia do Produto" />
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ABA 3: COMPRAS, VENDAS E CONTROLE DE ENTREGA -->
+      <div id="view-pedidos" class="store-view hidden">
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="stat-label">Total de Pedidos</span>
+            <strong id="stat-total">0</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Em Rota de Entrega</span>
+            <strong id="stat-rota">0</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Pedidos Entregues</span>
+            <strong id="stat-entregues">0</strong>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <div class="filter-group">
+            <button data-filter="todos" class="filter-btn active">Todos os Pedidos</button>
+            <button data-filter="compras" class="filter-btn">Minhas Compras</button>
+            <button data-filter="vendas" class="filter-btn">Minhas Vendas</button>
+          </div>
+          <button id="btn-refresh-pedidos" class="btn btn-outline btn-sm">Atualizar</button>
+        </div>
+
+        <div id="pedidos-list" class="pedidos-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
