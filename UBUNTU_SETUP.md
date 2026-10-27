@@ -63,3 +63,4 @@ node bot_vendedor.js
 # Terminal 3: Bot Comprador
 node bot_comprador.js
 ```
+
