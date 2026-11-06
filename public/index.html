@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Loja Mais Segura | Painel Comercial</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header class="navbar">
@@ -154,37 +154,64 @@
         </div>
       </div>
 
-      <!-- ABA 3: COMPRAS, VENDAS E CONTROLE DE ENTREGA -->
+      <!-- ABA 3: COMPRAS, VENDAS E CONTROLE DE ENTREGA (PLANILHA DE AUDITORIA) -->
       <div id="view-pedidos" class="store-view hidden">
-        <div class="stats-row">
+        <!-- 4 INDICADORES SUPERIORES SIMPLES E NUMÉRICOS (REQUISITO DO PROFESSOR) -->
+        <div class="stats-row stats-grid-4">
           <div class="stat-box">
-            <span class="stat-label">Total de Pedidos</span>
-            <strong id="stat-total">0</strong>
+            <span class="stat-label">Quantidade de Clientes</span>
+            <strong id="stat-clientes">0</strong>
           </div>
           <div class="stat-box">
-            <span class="stat-label">Em Rota de Entrega</span>
-            <strong id="stat-rota">0</strong>
+            <span class="stat-label">Quantidade de Produtos</span>
+            <strong id="stat-produtos">0</strong>
           </div>
           <div class="stat-box">
-            <span class="stat-label">Pedidos Entregues</span>
-            <strong id="stat-entregues">0</strong>
+            <span class="stat-label">Quantidade de Vendas</span>
+            <strong id="stat-vendas">0</strong>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Quantidade de Compras</span>
+            <strong id="stat-compras">0</strong>
           </div>
         </div>
 
         <div class="section-header">
           <div class="filter-group">
-            <button data-filter="todos" class="filter-btn active">Todos os Pedidos</button>
+            <button data-filter="todos" class="filter-btn active">Todos os Registros</button>
             <button data-filter="compras" class="filter-btn">Minhas Compras</button>
             <button data-filter="vendas" class="filter-btn">Minhas Vendas</button>
           </div>
-          <button id="btn-refresh-pedidos" class="btn btn-outline btn-sm">Atualizar</button>
+          <button id="btn-refresh-pedidos" class="btn btn-outline btn-sm">Atualizar Planilha</button>
         </div>
 
-        <div id="pedidos-list" class="pedidos-list"></div>
+        <!-- TABELA EM FORMA DE REGISTRO / PLANILHA -->
+        <div class="tabela-planilha-card">
+          <div class="tabela-responsive">
+            <table class="tabela-planilha">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">ID</th>
+                  <th>Cliente</th>
+                  <th>CPF (Mascarado)</th>
+                  <th>Compra &amp; Qtd</th>
+                  <th>Horário</th>
+                  <th>Comentário</th>
+                  <th>IP de Origem</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="pedidos-tabela-body">
+                <!-- Linhas renderizadas via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

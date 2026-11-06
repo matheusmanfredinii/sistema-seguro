@@ -407,6 +407,10 @@ input:focus, textarea:focus, select:focus {
   margin-bottom: 22px;
 }
 
+.stats-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .stat-box {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -423,8 +427,111 @@ input:focus, textarea:focus, select:focus {
 }
 
 .stat-box strong {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
+  font-weight: 700;
   color: var(--text);
+}
+
+/* TABELA ESTILO PLANILHA / REGISTRO DE AUDITORIA */
+.tabela-planilha-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.tabela-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabela-planilha {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+  min-width: 900px;
+}
+
+.tabela-planilha thead {
+  background: #f8fafc;
+  border-bottom: 2px solid var(--border);
+}
+
+.tabela-planilha th {
+  padding: 12px 16px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.tabela-planilha td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.tabela-planilha tbody tr:hover {
+  background: #f8fafc;
+}
+
+.tag-id {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--primary);
+  background: #e2e8f0;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.tag-cpf-mascarado {
+  font-family: monospace;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  display: inline-block;
+}
+
+.tag-ip {
+  font-family: monospace;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  display: inline-block;
+}
+
+.comentario-texto {
+  font-style: italic;
+  color: var(--text-muted);
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.horario-texto {
+  font-weight: 500;
+  color: #475569;
+}
+
+.select-status-sm {
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
 }
 
 .filter-group {

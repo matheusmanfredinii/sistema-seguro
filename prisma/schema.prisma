@@ -46,6 +46,9 @@ model Order {
   id               Int      @id @default(autoincrement())
   compradorId      Int
   productId        Int
+  quantidade       Int      @default(1)
+  comentario       String?  @default("Sem observações")
+  ip               String?  @default("127.0.0.1")
   data_compra      DateTime @default(now())
   endereco_entrega String
   status_entrega   String   @default("Processando Pagamento") // Ex: "Processando Pagamento", "Em Rota de Entrega", "Entregue"

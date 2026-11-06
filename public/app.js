@@ -285,10 +285,12 @@ async function comprarProduto(produtoId) {
   }
 }
 
-// CARREGAR E DETALHAR COMPRAS, VENDAS E ENTREGAS
+// CARREGAR E DETALHAR PLANILHA DE PEDIDOS E AUDITORIA
 async function carregarPedidos() {
-  const list = document.getElementById('pedidos-list');
-  list.innerHTML = '<div class="empty-state">Carregando...</div>';
+  const tbody = document.getElementById('pedidos-tabela-body');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#64748b;">Carregando registros de auditoria...</td></tr>';
+  }
 
   try {
     const res = await fetch('/pedidos', {
@@ -297,116 +299,84 @@ async function carregarPedidos() {
 
     const data = await res.json();
     listaPedidosCache = data.pedidos || [];
-    atualizarContadoresPedidos();
+    
+    // Atualiza os 4 Indicadores Simples e Numéricos no Topo (Requisito do Professor)
+    if (data.estatisticas) {
+      document.getElementById('stat-clientes').textContent = data.estatisticas.totalClientes || 0;
+      document.getElementById('stat-produtos').textContent = data.estatisticas.totalProdutos || 0;
+      document.getElementById('stat-vendas').textContent = data.estatisticas.totalVendas || 0;
+      document.getElementById('stat-compras').textContent = data.estatisticas.totalCompras || 0;
+    }
+
     renderizarPedidos();
   } catch (err) {
-    list.innerHTML = '<div class="empty-state">Erro ao carregar pedidos.</div>';
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:#dc2626;">Erro ao carregar planilha de registros.</td></tr>';
+    }
   }
 }
 
-function atualizarContadoresPedidos() {
-  const total = listaPedidosCache.length;
-  const emRota = listaPedidosCache.filter((p) => p.status_entrega === 'Em Rota de Entrega').length;
-  const entregues = listaPedidosCache.filter((p) => p.status_entrega === 'Entregue').length;
-
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-rota').textContent = emRota;
-  document.getElementById('stat-entregues').textContent = entregues;
-}
-
 function renderizarPedidos() {
-  const list = document.getElementById('pedidos-list');
+  const tbody = document.getElementById('pedidos-tabela-body');
+  if (!tbody) return;
 
   const filtrados = listaPedidosCache.filter((ped) => {
     if (!usuarioAtual) return true;
     if (filtroPedidoAtual === 'compras') return ped.compradorId === usuarioAtual.id;
-    if (filtroPedidoAtual === 'vendas') return ped.produto && ped.produto.vendedorId === usuarioAtual.id;
+    if (filtroPedidoAtual === 'vendas') return ped.vendedorId === usuarioAtual.id;
     return true;
   });
 
   if (filtrados.length === 0) {
-    list.innerHTML = `
-      <div class="empty-state">
-        Nenhum registro encontrado para este filtro.
-      </div>
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" style="text-align:center; padding:32px; color:#64748b;">
+          Nenhum registro de venda ou compra encontrado.
+        </td>
+      </tr>
     `;
     return;
   }
 
-  list.innerHTML = '';
+  tbody.innerHTML = '';
   filtrados.forEach((ped) => {
-    const dataFormatada = new Date(ped.data_compra).toLocaleString('pt-BR');
-    const precoFormatado = Number(ped.produto.preco).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    });
-
-    const fotoUrl = ped.produto.imagemUrl && ped.produto.imagemUrl.trim() !== ''
-      ? ped.produto.imagemUrl
-      : FALLBACK_IMG;
-
-    const souComprador = usuarioAtual && ped.compradorId === usuarioAtual.id;
-    const souVendedor = usuarioAtual && ped.produto.vendedorId === usuarioAtual.id;
-
     let classeBadge = 'status-outro';
     if (ped.status_entrega === 'Em Rota de Entrega') classeBadge = 'status-rota';
     if (ped.status_entrega === 'Entregue') classeBadge = 'status-entregue';
 
-    // Etapas visuais de entrega
-    const step1Class = ped.status_entrega === 'Processando Pagamento' ? 'active' : 'done';
-    const step2Class = ped.status_entrega === 'Em Rota de Entrega' ? 'active' : (ped.status_entrega === 'Entregue' ? 'done' : '');
-    const step3Class = ped.status_entrega === 'Entregue' ? 'done' : '';
-
-    const card = document.createElement('div');
-    card.className = 'pedido-card';
-    card.innerHTML = `
-      <div class="pedido-top">
-        <div class="pedido-produto-box">
-          <img class="pedido-thumb" src="${fotoUrl}" alt="${ped.produto.nome}" onerror="this.onerror=null;this.src='${FALLBACK_IMG}';" />
-          <div class="pedido-info">
-            <div class="pedido-tags">
-              ${souComprador ? '<span class="tag-tipo tag-compra">Compra</span>' : ''}
-              ${souVendedor ? '<span class="tag-tipo tag-venda">Venda</span>' : ''}
-            </div>
-            <h4>Pedido #${ped.id} — ${ped.produto.nome}</h4>
-            <span class="produto-preco">${precoFormatado}</span>
-          </div>
-        </div>
-
-        <div class="pedido-actions">
-          <span class="badge-status ${classeBadge}">${ped.status_entrega}</span>
-          <select class="select-status" data-id="${ped.id}">
-            <option value="Processando Pagamento" ${ped.status_entrega === 'Processando Pagamento' ? 'selected' : ''}>Processando Pagamento</option>
-            <option value="Em Rota de Entrega" ${ped.status_entrega === 'Em Rota de Entrega' ? 'selected' : ''}>Em Rota de Entrega</option>
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="tag-id">#${ped.id}</span></td>
+      <td><strong>${ped.clienteNome}</strong></td>
+      <td><span class="tag-cpf-mascarado" title="Metade oculta para proteção OWASP/LGPD">${ped.cpfMascarado}</span></td>
+      <td>
+        <strong>${ped.produtoNome}</strong>
+        <span style="display:inline-block; margin-left:4px; font-weight:600; color:#475569;">(${ped.quantidade} un)</span>
+      </td>
+      <td>
+        <span class="horario-texto">${ped.horaCompra}</span>
+        <small style="display:block; font-size:0.75rem; color:#94a3b8;">${ped.dataCompraFormatada}</small>
+      </td>
+      <td>
+        <span class="comentario-texto" title="${ped.comentario}">
+          ${ped.comentario}
+        </span>
+      </td>
+      <td><span class="tag-ip">${ped.ip}</span></td>
+      <td><span class="badge-status ${classeBadge}">${ped.status_entrega}</span></td>
+      <td style="text-align: right;">
+        <div style="display:inline-flex; gap:6px; align-items:center;">
+          <select class="select-status select-status-sm" data-id="${ped.id}">
+            <option value="Processando Pagamento" ${ped.status_entrega === 'Processando Pagamento' ? 'selected' : ''}>Processando</option>
+            <option value="Em Rota de Entrega" ${ped.status_entrega === 'Em Rota de Entrega' ? 'selected' : ''}>Em Rota</option>
             <option value="Entregue" ${ped.status_entrega === 'Entregue' ? 'selected' : ''}>Entregue</option>
             <option value="Cancelado" ${ped.status_entrega === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
           </select>
-          <button class="btn btn-primary btn-sm btn-salvar-status" data-id="${ped.id}">Atualizar Entrega</button>
+          <button class="btn btn-primary btn-sm btn-salvar-status" data-id="${ped.id}" style="padding:4px 8px; font-size:0.78rem;">OK</button>
         </div>
-      </div>
-
-      <div class="pedido-details-grid">
-        <div class="detail-item">
-          <span>Cliente</span>
-          <strong>${ped.comprador ? ped.comprador.nome : 'Cliente #' + ped.compradorId}</strong>
-        </div>
-        <div class="detail-item">
-          <span>Endereço de Entrega</span>
-          <strong>${ped.endereco_entrega}</strong>
-        </div>
-        <div class="detail-item">
-          <span>Data da Compra</span>
-          <strong>${dataFormatada}</strong>
-        </div>
-      </div>
-
-      <div class="delivery-stepper">
-        <div class="step-item ${step1Class}">1. Pagamento Aprovado</div>
-        <div class="step-item ${step2Class}">2. Em Rota de Entrega</div>
-        <div class="step-item ${step3Class}">3. Pedido Entregue</div>
-      </div>
+      </td>
     `;
-    list.appendChild(card);
+    tbody.appendChild(tr);
   });
 
   document.querySelectorAll('.btn-salvar-status').forEach((btn) => {

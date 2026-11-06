@@ -332,6 +332,7 @@ app.post('/comprar/:produtoId', autenticarJWT, async (req, res) => {
   try {
     const produtoId = parseInt(req.params.produtoId, 10);
     const compradorId = req.user.userId;
+    const { quantidade, comentario } = req.body || {};
 
     if (isNaN(produtoId)) {
       return res.status(400).json({ erro: 'ID do produto inválido.' });
@@ -367,11 +368,24 @@ app.post('/comprar/:produtoId', autenticarJWT, async (req, res) => {
       return res.status(402).json({ erro: 'Falha no processamento do cartão de crédito.' });
     }
 
-    // 4. Registra o pedido (Order) copiando o endereço do usuário e definindo o status_entrega
+    // 4. Captura do IP real da requisição (Requisito da Planilha de Auditoria)
+    let clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '127.0.0.1';
+    if (typeof clientIp === 'string') {
+      clientIp = clientIp.split(',')[0].trim().replace(/^::ffff:/, '');
+      if (clientIp === '::1') clientIp = '127.0.0.1';
+    }
+
+    const qtdFinal = parseInt(quantidade, 10) > 0 ? parseInt(quantidade, 10) : 1;
+    const comentarioFinal = comentario && String(comentario).trim() !== '' ? String(comentario).trim() : 'Sem observações';
+
+    // 5. Registra o pedido (Order) copiando o endereço do usuário e definindo o status_entrega
     const novoPedido = await prisma.order.create({
       data: {
         compradorId: comprador.id,
         productId: produto.id,
+        quantidade: qtdFinal,
+        comentario: comentarioFinal,
+        ip: clientIp,
         endereco_entrega: comprador.endereco_principal,
         status_entrega: 'Em Rota de Entrega'
       },
@@ -386,7 +400,7 @@ app.post('/comprar/:produtoId', autenticarJWT, async (req, res) => {
       mensagem: 'Compra realizada e pagamento aprovado com sucesso!',
       cobranca_simulada: {
         cartao_final: `**** **** **** ${ultimos4Digitos}`,
-        valor_cobrado: produto.preco,
+        valor_cobrado: produto.preco * qtdFinal,
         status_pagamento: 'Aprovado'
       },
       pedido: novoPedido
@@ -455,19 +469,78 @@ app.patch('/pedidos/:pedidoId/entrega', autenticarJWT, async (req, res) => {
  */
 app.get('/pedidos', autenticarJWT, async (req, res) => {
   try {
-    const pedidos = await prisma.order.findMany({
-      include: {
-        produto: {
-          include: {
-            vendedor: { select: { id: true, nome: true } }
-          }
+    const usuarioId = req.user.userId;
+
+    const [pedidos, totalClientes, totalProdutos, totalVendas, totalComprasUsuario] = await Promise.all([
+      prisma.order.findMany({
+        include: {
+          produto: {
+            include: {
+              vendedor: { select: { id: true, nome: true } }
+            }
+          },
+          comprador: { select: { id: true, nome: true, cpf: true } }
         },
-        comprador: { select: { id: true, nome: true } }
-      },
-      orderBy: { data_compra: 'desc' }
+        orderBy: { data_compra: 'desc' }
+      }),
+      prisma.user.count(),
+      prisma.product.count(),
+      prisma.order.count(),
+      prisma.order.count({ where: { compradorId: usuarioId } })
+    ]);
+
+    // Formata cada pedido com CPF mascarado (LGPD / OWASP), hora e dados tabulares
+    const pedidosFormatados = pedidos.map((ped) => {
+      let cpfMascarado = '***.***.***-**';
+      if (ped.comprador && ped.comprador.cpf) {
+        try {
+          const cpfClaro = decryptAES(ped.comprador.cpf);
+          const clean = cpfClaro.replace(/\D/g, '');
+          if (clean.length === 11) {
+            // Exibe primeiros 3 e últimos 2 dígitos, ocultando o miolo: 123.***.***-45
+            cpfMascarado = `${clean.slice(0, 3)}.***.***-${clean.slice(-2)}`;
+          } else {
+            cpfMascarado = cpfClaro.slice(0, 3) + '******' + cpfClaro.slice(-2);
+          }
+        } catch (e) {
+          cpfMascarado = '***.***.***-**';
+        }
+      }
+
+      const dataObj = new Date(ped.data_compra);
+      const horaCompra = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dataCompraFormatada = dataObj.toLocaleDateString('pt-BR');
+
+      return {
+        id: ped.id,
+        compradorId: ped.compradorId,
+        clienteNome: ped.comprador ? ped.comprador.nome : `Cliente #${ped.compradorId}`,
+        cpfMascarado,
+        produtoId: ped.productId,
+        produtoNome: ped.produto ? ped.produto.nome : 'Produto Indisponível',
+        produtoPreco: ped.produto ? ped.produto.preco : 0,
+        produtoImagem: ped.produto ? ped.produto.imagemUrl : null,
+        vendedorNome: ped.produto && ped.produto.vendedor ? ped.produto.vendedor.nome : 'Loja',
+        vendedorId: ped.produto ? ped.produto.vendedorId : null,
+        quantidade: ped.quantidade || 1,
+        comentario: ped.comentario || 'Sem observações',
+        ip: ped.ip || '127.0.0.1',
+        horaCompra,
+        dataCompraFormatada,
+        endereco_entrega: ped.endereco_entrega,
+        status_entrega: ped.status_entrega
+      };
     });
 
-    return res.status(200).json({ pedidos });
+    return res.status(200).json({
+      pedidos: pedidosFormatados,
+      estatisticas: {
+        totalClientes,
+        totalProdutos,
+        totalVendas,
+        totalCompras: totalVendas // Quantidade geral de compras realizadas no sistema
+      }
+    });
   } catch (error) {
     console.error('[ERRO GET /pedidos]:', error.message);
     return res.status(500).json({ erro: 'Erro ao listar os pedidos.' });
