@@ -3,7 +3,16 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+let bcrypt;
+try {
+  bcrypt = require('bcrypt');
+} catch (e) {
+  try {
+    bcrypt = require('bcryptjs');
+  } catch (err) {
+    bcrypt = require('bcrypt');
+  }
+}
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
@@ -14,15 +23,10 @@ const prisma = new PrismaClient();
 
 
 // Helmet adiciona cabeçalhos HTTP de segurança (XSS Filter, HSTS, NoSniff, Frameguard, etc.)
-// Desabilita apenas o bloqueio de imagens externas no CSP para permitir carregar fotos de produtos por link (URL)
+// contentSecurityPolicy desativado para evitar que o navegador de outros PCs force HTTPS no CSS e JS em rede local
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        'img-src': ["'self'", 'data:', 'https:', 'http:']
-      }
-    },
+    contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' }
   })
 );
