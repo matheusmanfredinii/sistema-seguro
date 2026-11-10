@@ -597,19 +597,6 @@ app.get('/pedidos', autenticarJWT, async (req, res) => {
     return res.status(500).json({ erro: 'Erro ao listar os pedidos.' });
   }
 });
-      pedidos: pedidosFormatados,
-      estatisticas: {
-        totalClientes,
-        totalProdutos,
-        totalVendas,
-        totalCompras: totalVendas // Quantidade geral de compras realizadas no sistema
-      }
-    });
-  } catch (error) {
-    console.error('[ERRO GET /pedidos]:', error.message);
-    return res.status(500).json({ erro: 'Erro ao listar os pedidos.' });
-  }
-});
 
 // ============================================================================
 // INICIALIZAÇÃO DO SERVIDOR
