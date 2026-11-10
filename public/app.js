@@ -3,6 +3,8 @@ const FALLBACK_IMG = 'https://placehold.co/600x400/e5e7eb/6b7280?text=Produto';
 let tokenJWT = localStorage.getItem('loja_jwt') || null;
 let usuarioAtual = JSON.parse(localStorage.getItem('loja_user') || 'null');
 let listaPedidosCache = [];
+let listaUsuariosCache = [];
+let listaProdutosCache = [];
 let filtroPedidoAtual = 'todos';
 
 const authSection = document.getElementById('auth-section');
@@ -285,7 +287,7 @@ async function comprarProduto(produtoId) {
   }
 }
 
-// CARREGAR E DETALHAR PLANILHA DE PEDIDOS E AUDITORIA
+// CARREGAR E DETALHAR PLANILHA DE AUDITORIA E EVENTOS
 async function carregarPedidos() {
   const tbody = document.getElementById('pedidos-tabela-body');
   if (tbody) {
@@ -299,6 +301,8 @@ async function carregarPedidos() {
 
     const data = await res.json();
     listaPedidosCache = data.pedidos || [];
+    listaUsuariosCache = data.usuarios || [];
+    listaProdutosCache = data.produtos || [];
     
     // Atualiza os 4 Indicadores Simples e Numéricos no Topo (Requisito do Professor)
     if (data.estatisticas) {
@@ -320,18 +324,25 @@ function renderizarPedidos() {
   const tbody = document.getElementById('pedidos-tabela-body');
   if (!tbody) return;
 
-  const filtrados = listaPedidosCache.filter((ped) => {
-    if (!usuarioAtual) return true;
-    if (filtroPedidoAtual === 'compras') return ped.compradorId === usuarioAtual.id;
-    if (filtroPedidoAtual === 'vendas') return ped.vendedorId === usuarioAtual.id;
-    return true;
-  });
+  let filtrados = [];
+  if (filtroPedidoAtual === 'vendas') {
+    filtrados = [...listaPedidosCache];
+  } else if (filtroPedidoAtual === 'usuarios') {
+    filtrados = [...listaUsuariosCache];
+  } else if (filtroPedidoAtual === 'produtos') {
+    filtrados = [...listaProdutosCache];
+  } else {
+    // "todos": combina vendas, novos usuários e produtos ordenados pelo horário mais recente
+    filtrados = [...listaPedidosCache, ...listaUsuariosCache, ...listaProdutosCache].sort(
+      (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
+    );
+  }
 
   if (filtrados.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="9" style="text-align:center; padding:32px; color:#64748b;">
-          Nenhum registro de venda ou compra encontrado.
+          Nenhum registro encontrado para este filtro.
         </td>
       </tr>
     `;
@@ -339,53 +350,44 @@ function renderizarPedidos() {
   }
 
   tbody.innerHTML = '';
-  filtrados.forEach((ped) => {
+  filtrados.forEach((item) => {
     let classeBadge = 'status-outro';
-    if (ped.status_entrega === 'Em Rota de Entrega') classeBadge = 'status-rota';
-    if (ped.status_entrega === 'Entregue') classeBadge = 'status-entregue';
+    if (item.status_entrega === 'Em Rota de Entrega') classeBadge = 'status-rota';
+    if (item.status_entrega === 'Entregue' || item.status_entrega === 'Ativo') classeBadge = 'status-entregue';
+
+    let tagTipoClass = 'badge-venda';
+    let tagTipoNome = 'Venda';
+    if (item.tipo === 'usuario') {
+      tagTipoClass = 'badge-usuario';
+      tagTipoNome = 'Usuário';
+    } else if (item.tipo === 'produto') {
+      tagTipoClass = 'badge-produto';
+      tagTipoNome = 'Produto';
+    }
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><span class="tag-id">#${ped.id}</span></td>
-      <td><strong>${ped.clienteNome}</strong></td>
-      <td><span class="tag-cpf-mascarado" title="Metade oculta para proteção OWASP/LGPD">${ped.cpfMascarado}</span></td>
+      <td><span class="badge-tipo ${tagTipoClass}">${tagTipoNome}</span></td>
+      <td><span class="tag-id">#${item.id}</span></td>
+      <td><strong>${item.clienteNome}</strong></td>
+      <td><span class="tag-cpf-mascarado" title="Metade oculta para proteção OWASP/LGPD">${item.cpfMascarado}</span></td>
       <td>
-        <strong>${ped.produtoNome}</strong>
-        <span style="display:inline-block; margin-left:4px; font-weight:600; color:#475569;">(${ped.quantidade} un)</span>
+        <strong>${item.produtoNome}</strong>
+        ${item.tipo === 'venda' ? `<span style="display:inline-block; margin-left:4px; font-weight:600; color:#475569;">(${item.quantidade} un)</span>` : ''}
       </td>
       <td>
-        <span class="horario-texto">${ped.horaCompra}</span>
-        <small style="display:block; font-size:0.75rem; color:#94a3b8;">${ped.dataCompraFormatada}</small>
+        <span class="horario-texto">${item.horaRegistro}</span>
+        <small style="display:block; font-size:0.75rem; color:#94a3b8;">${item.dataRegistro}</small>
       </td>
       <td>
-        <span class="comentario-texto" title="${ped.comentario}">
-          ${ped.comentario}
+        <span class="comentario-texto" title="${item.comentario}">
+          ${item.comentario}
         </span>
       </td>
-      <td><span class="tag-ip">${ped.ip}</span></td>
-      <td><span class="badge-status ${classeBadge}">${ped.status_entrega}</span></td>
-      <td style="text-align: right;">
-        <div style="display:inline-flex; gap:6px; align-items:center;">
-          <select class="select-status select-status-sm" data-id="${ped.id}">
-            <option value="Processando Pagamento" ${ped.status_entrega === 'Processando Pagamento' ? 'selected' : ''}>Processando</option>
-            <option value="Em Rota de Entrega" ${ped.status_entrega === 'Em Rota de Entrega' ? 'selected' : ''}>Em Rota</option>
-            <option value="Entregue" ${ped.status_entrega === 'Entregue' ? 'selected' : ''}>Entregue</option>
-            <option value="Cancelado" ${ped.status_entrega === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
-          </select>
-          <button class="btn btn-primary btn-sm btn-salvar-status" data-id="${ped.id}" style="padding:4px 8px; font-size:0.78rem;">OK</button>
-        </div>
-      </td>
+      <td><span class="tag-ip">${item.ip}</span></td>
+      <td><span class="badge-status ${classeBadge}">${item.status_entrega}</span></td>
     `;
     tbody.appendChild(tr);
-  });
-
-  document.querySelectorAll('.btn-salvar-status').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const pedidoId = btn.getAttribute('data-id');
-      const selectEl = document.querySelector(`.select-status[data-id="${pedidoId}"]`);
-      const novoStatus = selectEl.value;
-      await atualizarStatusEntrega(pedidoId, novoStatus);
-    });
   });
 }
 

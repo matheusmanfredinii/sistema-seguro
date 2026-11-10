@@ -22,11 +22,12 @@ const app = express();
 const prisma = new PrismaClient();
 
 
-// Helmet adiciona cabeçalhos HTTP de segurança (XSS Filter, HSTS, NoSniff, Frameguard, etc.)
-// contentSecurityPolicy desativado para evitar que o navegador de outros PCs force HTTPS no CSS e JS em rede local
+// Helmet adiciona cabeçalhos HTTP de segurança (XSS Filter, NoSniff, Frameguard, etc.)
+// contentSecurityPolicy e hsts desativados para evitar que navegadores forcem HTTPS em rede local HTTP
 app.use(
   helmet({
     contentSecurityPolicy: false,
+    hsts: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' }
   })
 );
@@ -475,8 +476,9 @@ app.get('/pedidos', autenticarJWT, async (req, res) => {
   try {
     const usuarioId = req.user.userId;
 
-    const [pedidos, totalClientes, totalProdutos, totalVendas, totalComprasUsuario] = await Promise.all([
+    const [pedidos, usuarios, produtos, totalClientes, totalProdutos, totalVendas] = await Promise.all([
       prisma.order.findMany({
+        take: 50,
         include: {
           produto: {
             include: {
@@ -487,56 +489,114 @@ app.get('/pedidos', autenticarJWT, async (req, res) => {
         },
         orderBy: { data_compra: 'desc' }
       }),
+      prisma.user.findMany({
+        take: 50,
+        orderBy: { criadoEm: 'desc' },
+        select: { id: true, nome: true, cpf: true, endereco_principal: true, criadoEm: true }
+      }),
+      prisma.product.findMany({
+        take: 50,
+        include: { vendedor: { select: { id: true, nome: true } } },
+        orderBy: { criadoEm: 'desc' }
+      }),
       prisma.user.count(),
       prisma.product.count(),
-      prisma.order.count(),
-      prisma.order.count({ where: { compradorId: usuarioId } })
+      prisma.order.count()
     ]);
 
-    // Formata cada pedido com CPF mascarado (LGPD / OWASP), hora e dados tabulares
-    const pedidosFormatados = pedidos.map((ped) => {
-      let cpfMascarado = '***.***.***-**';
-      if (ped.comprador && ped.comprador.cpf) {
-        try {
-          const cpfClaro = decryptAES(ped.comprador.cpf);
-          const clean = cpfClaro.replace(/\D/g, '');
-          if (clean.length === 11) {
-            // Exibe primeiros 3 e últimos 2 dígitos, ocultando o miolo: 123.***.***-45
-            cpfMascarado = `${clean.slice(0, 3)}.***.***-${clean.slice(-2)}`;
-          } else {
-            cpfMascarado = cpfClaro.slice(0, 3) + '******' + cpfClaro.slice(-2);
-          }
-        } catch (e) {
-          cpfMascarado = '***.***.***-**';
+    // Função auxiliar para mascarar CPF (LGPD / OWASP A02)
+    const mascararCpf = (cpfCifrado) => {
+      if (!cpfCifrado) return '***.***.***-**';
+      try {
+        const cpfClaro = decryptAES(cpfCifrado);
+        const clean = cpfClaro.replace(/\D/g, '');
+        if (clean.length === 11) {
+          return `${clean.slice(0, 3)}.***.***-${clean.slice(-2)}`;
         }
+        return cpfClaro.slice(0, 3) + '******' + cpfClaro.slice(-2);
+      } catch (e) {
+        return '***.***.***-**';
       }
+    };
 
+    // 1. Formata cada pedido/venda
+    const pedidosFormatados = pedidos.map((ped) => {
       const dataObj = new Date(ped.data_compra);
-      const horaCompra = dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dataCompraFormatada = dataObj.toLocaleDateString('pt-BR');
-
       return {
+        tipo: 'venda',
         id: ped.id,
         compradorId: ped.compradorId,
         clienteNome: ped.comprador ? ped.comprador.nome : `Cliente #${ped.compradorId}`,
-        cpfMascarado,
+        cpfMascarado: mascararCpf(ped.comprador ? ped.comprador.cpf : null),
         produtoId: ped.productId,
         produtoNome: ped.produto ? ped.produto.nome : 'Produto Indisponível',
         produtoPreco: ped.produto ? ped.produto.preco : 0,
-        produtoImagem: ped.produto ? ped.produto.imagemUrl : null,
         vendedorNome: ped.produto && ped.produto.vendedor ? ped.produto.vendedor.nome : 'Loja',
         vendedorId: ped.produto ? ped.produto.vendedorId : null,
         quantidade: ped.quantidade || 1,
         comentario: ped.comentario || 'Sem observações',
         ip: ped.ip || '127.0.0.1',
-        horaCompra,
-        dataCompraFormatada,
-        endereco_entrega: ped.endereco_entrega,
+        horaRegistro: dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        dataRegistro: dataObj.toLocaleDateString('pt-BR'),
+        timestamp: dataObj.getTime(),
         status_entrega: ped.status_entrega
       };
     });
 
+    // 2. Formata usuários novos cadastrados
+    const usuariosFormatados = usuarios.map((u) => {
+      const dataObj = new Date(u.criadoEm);
+      return {
+        tipo: 'usuario',
+        id: u.id,
+        clienteNome: u.nome,
+        cpfMascarado: mascararCpf(u.cpf),
+        produtoNome: 'Cadastro de Conta',
+        quantidade: 1,
+        comentario: u.endereco_principal || 'Novo cliente cadastrado',
+        ip: '127.0.0.1',
+        horaRegistro: dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        dataRegistro: dataObj.toLocaleDateString('pt-BR'),
+        timestamp: dataObj.getTime(),
+        status_entrega: 'Ativo'
+      };
+    });
+
+    // 3. Formata produtos novos anunciados
+    const produtosFormatados = produtos.map((p) => {
+      const dataObj = new Date(p.criadoEm);
+      return {
+        tipo: 'produto',
+        id: p.id,
+        clienteNome: p.vendedor ? p.vendedor.nome : 'Loja',
+        cpfMascarado: '***.***.***-**',
+        produtoNome: p.nome,
+        quantidade: 1,
+        comentario: `Preço: R$ ${Number(p.preco).toFixed(2)}`,
+        ip: '127.0.0.1',
+        horaRegistro: dataObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        dataRegistro: dataObj.toLocaleDateString('pt-BR'),
+        timestamp: dataObj.getTime(),
+        status_entrega: 'Disponível'
+      };
+    });
+
     return res.status(200).json({
+      pedidos: pedidosFormatados,
+      usuarios: usuariosFormatados,
+      produtos: produtosFormatados,
+      estatisticas: {
+        totalClientes,
+        totalProdutos,
+        totalVendas,
+        totalCompras: totalVendas
+      }
+    });
+  } catch (error) {
+    console.error('[ERRO GET /pedidos]:', error.message);
+    return res.status(500).json({ erro: 'Erro ao listar os pedidos.' });
+  }
+});
       pedidos: pedidosFormatados,
       estatisticas: {
         totalClientes,

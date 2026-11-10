@@ -178,9 +178,10 @@
 
         <div class="section-header">
           <div class="filter-group">
-            <button data-filter="todos" class="filter-btn active">Todos os Registros</button>
-            <button data-filter="compras" class="filter-btn">Minhas Compras</button>
-            <button data-filter="vendas" class="filter-btn">Minhas Vendas</button>
+            <button data-filter="todos" class="filter-btn active">Todos</button>
+            <button data-filter="vendas" class="filter-btn">Vendas</button>
+            <button data-filter="usuarios" class="filter-btn">Usuários Novos</button>
+            <button data-filter="produtos" class="filter-btn">Produtos Novos</button>
           </div>
           <button id="btn-refresh-pedidos" class="btn btn-outline btn-sm">Atualizar Planilha</button>
         </div>
@@ -191,15 +192,15 @@
             <table class="tabela-planilha">
               <thead>
                 <tr>
+                  <th style="width: 75px;">Tipo</th>
                   <th style="width: 60px;">ID</th>
-                  <th>Cliente</th>
+                  <th>Nome</th>
                   <th>CPF (Mascarado)</th>
-                  <th>Compra &amp; Qtd</th>
+                  <th>Item / Ação &amp; Qtd</th>
                   <th>Horário</th>
-                  <th>Comentário</th>
-                  <th>IP de Origem</th>
+                  <th>Comentário / Detalhes</th>
+                  <th>IP</th>
                   <th>Status</th>
-                  <th style="text-align: right;">Ação</th>
                 </tr>
               </thead>
               <tbody id="pedidos-tabela-body">

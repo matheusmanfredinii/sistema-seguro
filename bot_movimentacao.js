@@ -403,28 +403,27 @@ async function rotinaEfetuarCompra() {
 }
 
 // ============================================================================
-// INICIALIZAÇÃO E AGENDAMENTO
+// INICIALIZAÇÃO E AGENDAMENTO (INTERVALO: A CADA 5 MINUTOS)
 // ============================================================================
 
 console.log('================================================================');
-console.log('🚀 BOT DE MOVIMENTAÇÃO AUTOMÁTICA INICIADO COM SUCESSO');
+console.log('🚀 BOT DE MOVIMENTAÇÃO AUTOMÁTICA (CICLO DE 5 MINUTOS)');
 console.log('⏱️  Intervalos:');
-console.log('   • 2 novos usuários a cada 10 minutos');
-console.log('   • 1 venda diferente a cada 20 minutos (catálogo rotativo sem repetições)');
-console.log('   • 1 compra com registro de auditoria a cada 20 minutos');
+console.log('   • 1 anúncio de venda diferente a cada 5 minutos');
+console.log('   • 1 compra com registro de auditoria e IP a cada 5 minutos');
+console.log('   • 2 novos usuários cadastrados a cada 5 minutos');
 console.log('================================================================');
 
-// Executa 1 rodada inicial agora para demonstrar imediatamente ao professor
+// Executa 1 rodada completa inicial imediatamente para popular a planilha na hora
 (async () => {
   await rotinaAnunciarVendaDiferente();
   await rotinaCadastrarDoisUsuarios();
   await rotinaEfetuarCompra();
 })();
 
-// Configura os intervalos exatos solicitados
-const DEZ_MINUTOS = 10 * 60 * 1000;
-const VINTE_MINUTOS = 20 * 60 * 1000;
+// Configura os intervalos de 5 minutos (300.000 ms)
+const CINCO_MINUTOS = 5 * 60 * 1000;
 
-setInterval(rotinaCadastrarDoisUsuarios, DEZ_MINUTOS);
-setInterval(rotinaAnunciarVendaDiferente, VINTE_MINUTOS);
-setInterval(rotinaEfetuarCompra, VINTE_MINUTOS);
+setInterval(rotinaAnunciarVendaDiferente, CINCO_MINUTOS);
+setInterval(rotinaEfetuarCompra, CINCO_MINUTOS);
+setInterval(rotinaCadastrarDoisUsuarios, CINCO_MINUTOS);
